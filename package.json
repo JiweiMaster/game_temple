@@ -1,0 +1,12 @@
+{
+  "name": "zen-temple-online",
+  "version": "1.0.0",
+  "description": "云上禅寺 - 3D多人在线寺庙：打坐、念经、烧香、敲木鱼",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
