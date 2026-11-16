@@ -211,9 +211,9 @@ sun.shadow.camera.near=5; sun.shadow.camera.far=160;
   sun.shadow.bias=-0.0015;
 scene.add(sun);
   const buddhaLight = new THREE.PointLight(0xffd9a0, 2.4, 28, 2);
-  buddhaLight.position.set(0, 10.5, -33); scene.add(buddhaLight);
-const burnerLight = new THREE.PointLight(0xff9040, 0.6, 8, 2);
-burnerLight.position.set(0, 2.6, -13); scene.add(burnerLight);
+  buddhaLight.position.set(0, 10.5, -30); scene.add(buddhaLight);
+  const burnerLight = new THREE.PointLight(0xff9040, 0.6, 8, 2);
+  burnerLight.position.set(0, 2.6, -10); scene.add(burnerLight);
 
 /* ---------------- 纹理工厂 ---------------- */
 function makeCanvas(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
@@ -517,8 +517,8 @@ function nearestBurner(x,z){
   const b = burnerAt(x,z);
   return (b && dist2D(x,z,b.x,b.z)<3.6) ? b : null;
 }
-buildBurner(0,-13,1);
-buildBurner(-13,-16,0.62); buildBurner(13,-16,0.62);
+  buildBurner(0,-10,1);
+  buildBurner(-13,-13,0.62); buildBurner(13,-13,0.62);
 
 /* 大殿通用构件：木鱼架 / 烛台 */
 function buildFish(fx,fz,baseY){
@@ -574,9 +574,17 @@ function dumpScene(){
   scene.traverse(o=>{ if(o.isMesh){ b.setFromObject(o); const c=b.getCenter(new THREE.Vector3()); const s=b.getSize(new THREE.Vector3());
     console.log('[dump] c=('+c.x.toFixed(1)+','+c.y.toFixed(1)+','+c.z.toFixed(1)+') s=('+s.x.toFixed(1)+','+s.y.toFixed(1)+','+s.z.toFixed(1)+') '+(o.name||o.geometry.type)+(o.isInstancedMesh?'(inst)':'')); } });
 }
-/* 弥勒宝殿 */
+/* 大雄宝殿 */
 function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
 (function buildHall(){
+  /* 整体南移 3m：IIFE 内全部 mesh 先收进 hallAll 组，末尾统一位移（北墙不再贴场景边缘） */
+  const hallAll = new THREE.Group();
+  const _sceneAdd = scene.add.bind(scene);
+  const _addCollider = addCollider;
+  const collidersTodo = [];
+  const cushionStart = cushions.length;
+  scene.add = function(){ for(let i=0;i<arguments.length;i++) hallAll.add(arguments[i]); };
+  addCollider = function(x,z,r){ collidersTodo.push([x,z,r]); };
   const H = 1.2; // 台基顶
   const pillarMat = mat(0x9e2b25,{roughness:0.7});
   const wallMat = mat(0xa8352f,{roughness:0.85});
@@ -589,29 +597,36 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
   const t2 = new THREE.Mesh(new THREE.BoxGeometry(32.6,0.5,20.6), stoneMat); t2.position.set(0,0.75,-30); t2.receiveShadow=true;
   const t3 = new THREE.Mesh(new THREE.BoxGeometry(31.6,0.2,19.6), stoneMat); t3.position.set(0,1.1,-30); t3.receiveShadow=true;
   scene.add(t1,t2,t3);
-  /* 台基石栏杆（南缘留台阶口，东西两缘） */
+  /* 台基石栏杆（南缘留台阶口，东西两缘；柱底贴台面，附碰撞防穿行） */
   const balMat = mat(0xb8bec6,{roughness:0.9});
   for(let i=0;i<6;i++){
     const bal = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.75,0.22), balMat);
-    bal.position.set(-16.2+i*2.25, 1.6, -19.2); bal.castShadow=true; scene.add(bal);
+    const bx = -16.2+i*2.25;
+    bal.position.set(bx, 1.575, -19.2); bal.castShadow=true; scene.add(bal);
+    addCollider(bx,-19.2,0.45);
   }
   for(let i=0;i<6;i++){
     const bal = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.75,0.22), balMat);
-    bal.position.set(16.2-i*2.25, 1.6, -19.2); bal.castShadow=true; scene.add(bal);
+    const bx = 16.2-i*2.25;
+    bal.position.set(bx, 1.575, -19.2); bal.castShadow=true; scene.add(bal);
+    addCollider(bx,-19.2,0.45);
   }
-  const railSL = new THREE.Mesh(new THREE.BoxGeometry(12.3,0.18,0.28), balMat); railSL.position.set(-10.35,1.9,-19.2); scene.add(railSL);
+  const railSL = new THREE.Mesh(new THREE.BoxGeometry(12.3,0.18,0.28), balMat); railSL.position.set(-10.35,1.875,-19.2); scene.add(railSL);
   const railSR = railSL.clone(); railSR.position.x=10.35; scene.add(railSR);
-  for(let i=0;i<8;i++){
+  for(let i=0;i<15;i++){
+    const bz = -21.5-i*1.2;
     const bal = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.75,0.22), balMat);
-    bal.position.set(-16.75, 1.6, -21.5-i*2.4); bal.castShadow=true; scene.add(bal);
+    bal.position.set(-16.75, 1.575, bz); bal.castShadow=true; scene.add(bal);
     const bal2 = bal.clone(); bal2.position.x=16.75; scene.add(bal2);
+    addCollider(-16.75,bz,0.5); addCollider(16.75,bz,0.5);
   }
-  const railE2 = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.18,19.4), balMat); railE2.position.set(-16.75,1.9,-30.3); scene.add(railE2);
+  const railE2 = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.18,19.4), balMat); railE2.position.set(-16.75,1.875,-30.3); scene.add(railE2);
   const railW2 = railE2.clone(); railW2.position.x=16.75; scene.add(railW2);
-  /* 大台阶（宽 9）*/
+  /* 大台阶（宽 9，实心阶梯：每级从地面堆到该级顶，消除首级底部悬空） */
   for(let i=0;i<5;i++){
-    const step = new THREE.Mesh(new THREE.BoxGeometry(9,0.3,0.66), stoneMat);
-    step.position.set(0, 1.05-0.3*i, -18.9-0.66*i); step.receiveShadow=true; step.castShadow=true;
+    const hgt = 1.2-0.24*i;
+    const step = new THREE.Mesh(new THREE.BoxGeometry(9,hgt,0.66), stoneMat);
+    step.position.set(0, hgt/2, -18.9-0.66*i); step.receiveShadow=true; step.castShadow=true;
     scene.add(step);
   }
 
@@ -663,8 +678,8 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
   eaveE.rotation.z=0.62; eaveE.position.set(-19.3,eaveY-2.07,-30); eaveE.castShadow=true; scene.add(eaveE);
   const eaveW = eaveE.clone(); eaveW.rotation.z=-0.62; eaveW.position.x=19.3; scene.add(eaveW);
 
-  /* 腰檐层外墙（重檐间：12.5..18.0，南面兼作殿门上方门头墙，南面不设披檐后底部延至额枋顶） */
-  const upperWall = new THREE.Mesh(new THREE.BoxGeometry(28,5.5,17.8), wallMat);
+  /* 腰檐层外墙（重檐间：12.5..18.0，与殿墙同宽使三面披檐上端贴实无悬空；南面兼作殿门上方门头墙） */
+  const upperWall = new THREE.Mesh(new THREE.BoxGeometry(32.4,5.5,19.4), wallMat);
   upperWall.position.set(0,eaveY+2.05,-30); upperWall.castShadow=true; scene.add(upperWall);
 
   /* 主屋顶（双坡：上檐檐口 y18 正贴腰墙顶起坡，脊高 26，陡坡高耸） */
@@ -685,7 +700,7 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
   for(const s of [-1,1]){
     const m = new THREE.Mesh(triGeo, wallMat);
     m.rotation.y=s*Math.PI/2;
-    m.position.set(s*14.2, eaveY+7.55, -30.2);
+    m.position.set(s*16.3, eaveY+7.55, -30.2);
     m.castShadow=true; scene.add(m);
   }
 
@@ -747,7 +762,7 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
     const bposQ = new URLSearchParams(location.search).get('bpos');
     if(bposQ){ const b=bposQ.split('_').map(Number); buddhaModel.position.set(b[0], b[1], b[2]); }
     buddhaModel.rotation.y = BUDDHA_ROTY;
-    scene.add(buddhaModel);
+    hallAll.add(buddhaModel); /* 加进 hallAll 随殿整体南移 */
     if(new URLSearchParams(location.search).get('dump')) dumpScene();
     console.log('[佛像] 已加入场景, 缩放:', scale.toFixed(2), '位置:', buddhaModel.position.x, buddhaModel.position.y, buddhaModel.position.z);
   }, undefined, (err)=>{ console.error('[佛像] GLB 加载失败:', err); });
@@ -778,6 +793,13 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
 
   /* 檐下灯笼（殿前两串，挂披檐下） */
   addLantern(-13.5,H+7.9,-21.4); addLantern(13.5,H+7.9,-21.4);
+  /* 还原劫持：hallAll 整体南移 3m，碰撞与蒲团数据同步补偿 */
+  scene.add = _sceneAdd;
+  addCollider = _addCollider;
+  hallAll.position.z = 3;
+  _sceneAdd(hallAll);
+  collidersTodo.forEach(c=>_addCollider(c[0], c[1]+3, c[2]));
+  for(let i=cushionStart;i<cushions.length;i++) cushions[i].z += 3;
 })();
 
 /* 灯笼（可复用） */
@@ -1196,7 +1218,7 @@ function handleMessage(d){
         playKnockFX(fx, fz, true);
         if(r) r.knockUntil = performance.now()+2600;
       } else if(d.a==='burn'){
-        const b = burnerAt(d.bx||0, d.bz||-13);
+        const b = burnerAt(d.bx||0, d.bz||-10);
         if(b){ addBurnerStick(b); b.boost=6; spawnRipple(b.x, 2.2*b.s+0.3, b.z); }
       }
       break;
@@ -1235,10 +1257,12 @@ function connect(id){
 
 /* ---------------- 地形高度 ---------------- */
 function groundY(x,z){
-  if(Math.abs(x)<14.8 && z<=-20 && z>=-38.2) return 1.2;      // 殿台基上
-  if(Math.abs(x)<3.5 && z<-20 && z>-22.2){                    // 台阶
-    return 1.2*clamp((-20-z)/2.2,0,1);
+  /* 台阶（世界坐标，殿整体南移 3m 后）：5 级阶梯逐级抬升，防走进台阶穿模 */
+  if(Math.abs(x)<4.5 && z<=-15.9 && z>=-18.9){
+    const i = Math.min(4, Math.floor((-15.9-z)/0.66));
+    return 1.2-0.24*i;
   }
+  if(Math.abs(x)<15.5 && z<=-18.6 && z>=-37.5) return 1.2;      // 殿台基上（t3 台面）
   return 0;
 }
 /* 角色目标高度（打坐时贴合蒲团/地面） */
