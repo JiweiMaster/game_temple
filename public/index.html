@@ -69,7 +69,7 @@
     <button id="enterBtn">入 寺</button>
     <div id="enterTip"></div>
     <div class="enter-foot">WebGL 3D · 实时多人 · 最多 100 人同寺<br>
-      WASD 移动 · 鼠标拖拽转视角 · E 打坐 · J 念经 · K 敲木鱼</div>
+      <b>点击地面移动</b> · 鼠标拖拽转视角 · E 打坐 · J 念经 · K 敲木鱼</div>
   </div>
 </div>
 <div id="hud">
@@ -81,7 +81,7 @@
   <div id="hintBar"></div>
   <div id="chatLog"></div>
   <div id="chatInputWrap"><input id="chatInput" maxlength="60" placeholder="按 Enter 发送… (Esc 取消)"></div>
-  <div id="keysHelp">WASD 移动 · 拖拽转视角 · 滚轮缩放<br>E 打坐/起身 · J 念经 · K 敲木鱼 · Enter 聊天</div>
+  <div id="keysHelp">点击地面移动 · 拖拽转视角 · 滚轮缩放<br>E 打坐/起身 · J 念经 · K 敲木鱼 · Enter 聊天</div>
   <div id="centerMsg"></div>
 </div>
 <div id="flash"></div>
@@ -354,6 +354,7 @@ const lanterns = [];             // 灯笼组
 const cushions = [];             // 蒲团 {x,z,y}
 const fishes = [];               // 木鱼 {group,mallet,tx,tz}
 let buddhaHalo = null;
+let pickRoot = null; /* 点击走位拾取层（全透明盲地板） */
 const burners = []; // 香炉集合 {x,z,s,sticks,timer,boost}
 const smokeTex = smokeTexture(), glowTex = glowTexture();
 const CHANT_CHARS = ['卍','禅','佛','悟','静','缘'].map(charTexture);
@@ -793,6 +794,19 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
 
   /* 檐下灯笼（殿前两串，挂披檐下） */
   addLantern(-13.5,H+7.9,-21.4); addLantern(13.5,H+7.9,-21.4);
+  /* 点击走位盲地板（全透明不可见，仅供射线拾取：广场/台面/台阶面） */
+  const pickMat = new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false});
+  pickRoot = new THREE.Group();
+  const pg0 = new THREE.Mesh(new THREE.PlaneGeometry(160,160), pickMat);
+  pg0.rotation.x=-Math.PI/2; pg0.position.set(0,0.01,0); pickRoot.add(pg0);
+  const pgTop = new THREE.Mesh(new THREE.PlaneGeometry(31.6,19.6), pickMat);
+  pgTop.rotation.x=-Math.PI/2; pgTop.position.set(0,1.21,-30); pickRoot.add(pgTop);
+  for(let pi=0;pi<5;pi++){
+    const ph=1.2-0.24*pi;
+    const sp=new THREE.Mesh(new THREE.PlaneGeometry(9,0.66), pickMat);
+    sp.rotation.x=-Math.PI/2; sp.position.set(0,ph+0.01,-18.9-0.66*pi); pickRoot.add(sp);
+  }
+  scene.add(pickRoot);
   /* 还原劫持：hallAll 整体南移 3m，碰撞与蒲团数据同步补偿 */
   scene.add = _sceneAdd;
   addCollider = _addCollider;
@@ -1196,7 +1210,7 @@ function handleMessage(d){
       document.getElementById('hud').style.display='block';
       AudioSys.bell(0.5);
       addChatLine(`欢迎施主「${selfId}」来到云上禅寺`, true);
-      addChatLine('WASD 移动 · E 打坐 · J 念经 · K 敲木鱼 · Enter 聊天', true);
+      addChatLine('点击地面移动 · E 打坐 · J 念经 · K 敲木鱼 · Enter 聊天', true);
       showCenter('欢迎入寺');
       break;
     }
@@ -1323,12 +1337,31 @@ document.addEventListener('keydown', e=>{
 });
 document.addEventListener('keyup', e=>{ keys[e.code]=false; });
 
-/* 鼠标拖拽视角 + 滚轮 */
-let dragging=false, lastMX=0, lastMY=0;
-renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; lastMX=e.clientX; lastMY=e.clientY; });
-window.addEventListener('pointerup', ()=>dragging=false);
+/* 鼠标拖拽视角 + 滚轮 + 点击地面走位 */
+let dragging=false, lastMX=0, lastMY=0, dragMoved=false, downOnCanvas=false;
+let downX=0, downY=0, downT=0;
+const raycaster = new THREE.Raycaster();
+const ndcV = new THREE.Vector2();
+function tryClickMove(cx, cy){
+  if(!joined || !pickRoot) return;
+  ndcV.set((cx/window.innerWidth)*2-1, -(cy/window.innerHeight)*2+1);
+  raycaster.setFromCamera(ndcV, camera);
+  const hits = raycaster.intersectObjects(pickRoot.children, false);
+  if(hits.length){
+    const p = hits[0].point;
+    local.moveTarget = {x:p.x, z:p.z};
+    if(local.state!=='idle') standUp();
+  }
+}
+renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; dragMoved=false; downOnCanvas=true; downX=lastMX=e.clientX; downY=lastMY=e.clientY; downT=performance.now(); });
+window.addEventListener('pointerup', e=>{
+  dragging=false;
+  if(downOnCanvas && !dragMoved && performance.now()-downT<400) tryClickMove(e.clientX, e.clientY);
+  downOnCanvas=false;
+});
 window.addEventListener('pointermove', e=>{
   if(!dragging) return;
+  if(Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY)>6) dragMoved=true;
   camYaw -= (e.clientX-lastMX)*0.006;
   camPitch = clamp(camPitch + (e.clientY-lastMY)*0.004, -0.1, 1.1);
   lastMX=e.clientX; lastMY=e.clientY;
@@ -1553,23 +1586,31 @@ function loop(now){
     const s=(keys['KeyD']||keys['ArrowRight']?1:0)-(keys['KeyA']||keys['ArrowLeft']?1:0);
     const canMove = local.state==='idle';
     let moving=false;
+    if((f||s)) local.moveTarget=null; /* 键盘输入优先，清除点击走位目标 */
+    let mx=0, mz=0;
     if((f||s) && canMove){
-      if(local.state!=='idle'){ /* 不会发生 */ }
       const fx=-Math.sin(camYaw), fz=-Math.cos(camYaw);
       const rx=-fz, rz=fx;
-      let mx=f*fx+s*rx, mz=f*fz+s*rz;
-      const len=Math.hypot(mx,mz);
-      if(len>0.01){
-        mx/=len; mz/=len;
-        const speed=4.2;
-        let nx=local.x+mx*speed*dt, nz=local.z+mz*speed*dt;
-        [nx,nz]=collideMove(nx,nz);
-        local.x=nx; local.z=nz;
-        local.ry=Math.atan2(mx,mz);
-        moving=true;
-      }
+      mx=f*fx+s*rx; mz=f*fz+s*rz;
+    } else if(local.moveTarget && canMove){
+      const dx=local.moveTarget.x-local.x, dz=local.moveTarget.z-local.z;
+      const dist=Math.hypot(dx,dz);
+      if(dist<0.25){ local.moveTarget=null; }
+      else { mx=dx/dist; mz=dz/dist; }
     }
-    if((f||s) && !canMove){ standUp(); }
+    const len=Math.hypot(mx,mz);
+    if(len>0.01){
+      mx/=len; mz/=len;
+      const speed=4.2;
+      let nx=local.x+mx*speed*dt, nz=local.z+mz*speed*dt;
+      [nx,nz]=collideMove(nx,nz);
+      /* 点击走位被碰撞挡住（几乎没移动）时放弃目标，防止贴墙空走 */
+      if(local.moveTarget && Math.hypot(nx-local.x,nz-local.z) < speed*dt*0.25) local.moveTarget=null;
+      local.x=nx; local.z=nz;
+      local.ry=Math.atan2(mx,mz);
+      moving=true;
+    }
+    if((f||s||local.moveTarget) && !canMove){ standUp(); }
     /* 烧香计时 */
     if(local.state==='incense' && now>=local.incenseUntil) finishIncense();
     /* 位置同步（10Hz 节流） */
