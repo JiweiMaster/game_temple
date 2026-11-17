@@ -7,7 +7,7 @@
 <style>
   html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#1a2440;
     font-family:"Microsoft YaHei","PingFang SC",sans-serif;user-select:none;}
-  canvas{display:block;}
+  canvas{display:block;touch-action:none;}
   /* ---------- 入寺界面 ---------- */
   #enterScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:100;
     background:radial-gradient(ellipse at 50% 42%, rgba(20,28,52,0.30), rgba(8,12,26,0.82));
@@ -40,8 +40,15 @@
   #muteBtn{background:rgba(12,16,30,0.55);border:1px solid rgba(214,178,96,0.35);color:#f0e2b8;
     padding:7px 13px;border-radius:8px;font-size:12px;cursor:pointer;letter-spacing:1px;}
   #hintBar{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);display:none;
-    background:rgba(12,16,30,0.62);border:1px solid rgba(214,178,96,0.4);color:#ffe9b0;
-    padding:9px 22px;border-radius:10px;font-size:14px;letter-spacing:1px;backdrop-filter:blur(4px);white-space:nowrap;}
+    gap:10px;pointer-events:auto;backdrop-filter:blur(4px);}
+  #hintBar .htext{background:rgba(12,16,30,0.62);border:1px solid rgba(214,178,96,0.4);color:#ffe9b0;
+    padding:9px 22px;border-radius:10px;font-size:14px;letter-spacing:1px;white-space:nowrap;}
+  .hbtn{background:rgba(12,16,30,0.62);border:1px solid rgba(214,178,96,0.55);color:#ffd977;
+    padding:9px 20px;border-radius:10px;font-size:14px;letter-spacing:2px;white-space:nowrap;cursor:pointer;
+    font-family:"Microsoft YaHei",sans-serif;transition:filter .15s,transform .1s;
+    touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  .hbtn:hover{filter:brightness(1.25);border-color:rgba(255,217,119,0.9);}
+  .hbtn:active{filter:brightness(0.9);transform:scale(0.96);background:rgba(214,178,96,0.35);color:#fff;}
   #chatLog{position:absolute;left:16px;bottom:118px;width:350px;max-height:168px;overflow-y:auto;
     display:flex;flex-direction:column;gap:3px;scrollbar-width:none;}
   #chatLog::-webkit-scrollbar{display:none;}
@@ -49,10 +56,26 @@
     border-radius:6px;width:fit-content;max-width:96%;opacity:.92;}
   .chat-line.sys{color:#9db3d8;font-style:italic;}
   #chatInputWrap{position:absolute;left:16px;bottom:78px;width:350px;pointer-events:auto;display:none;}
-  #chatInput{width:100%;box-sizing:border-box;padding:9px 12px;font-size:13px;border-radius:8px;
+  #chatInput{width:100%;box-sizing:border-box;padding:9px 66px 9px 12px;font-size:13px;border-radius:8px;
     border:1px solid rgba(214,178,96,0.45);background:rgba(12,16,30,0.72);color:#fff;outline:none;}
-  #keysHelp{position:absolute;right:16px;bottom:78px;color:rgba(240,226,184,0.8);font-size:11.5px;
-    line-height:1.8;text-align:right;letter-spacing:1px;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+  #chatSend{display:flex;position:absolute;right:3px;top:3px;bottom:3px;width:56px;border:none;border-radius:6px;
+    background:linear-gradient(180deg,#d6b260,#bf9944);color:#241c10;font-size:13px;letter-spacing:2px;
+    font-family:"Microsoft YaHei",sans-serif;cursor:pointer;align-items:center;justify-content:center;}
+  #chatSend:hover{filter:brightness(1.08);}
+  #chatSend:active{filter:brightness(0.95);}
+  /* ---------- 移动端触屏动作栏 ---------- */
+  #touchBar{position:absolute;right:14px;bottom:24px;display:none;gap:12px;pointer-events:auto;}
+  .tbtn{width:58px;height:58px;border-radius:50%;background:rgba(12,16,30,0.6);border:1.5px solid rgba(214,178,96,0.55);color:#ffe9b0;font-size:14px;letter-spacing:1px;font-family:"Microsoft YaHei",sans-serif;backdrop-filter:blur(4px);touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;}
+  .tbtn:active{background:rgba(214,178,96,0.4);color:#fff;}
+  @media (max-width:600px){
+    #chatLog{width:calc(100vw - 110px);bottom:172px;max-height:120px;}
+    #chatInputWrap{width:calc(100vw - 110px);bottom:132px;}
+    #hintBar{bottom:88px;}
+    .hbtn,#hintBar .htext{font-size:12.5px;padding:7px 14px;}
+    .stat{font-size:11.5px;padding:5px 9px;}
+    .stat b{font-size:13px;}
+    #centerMsg{font-size:23px;letter-spacing:3px;white-space:normal;max-width:88vw;text-align:center;line-height:1.45;}
+  }
   #centerMsg{position:absolute;left:50%;top:24%;transform:translateX(-50%);font-family:"KaiTi",serif;
     font-size:32px;color:#ffd977;letter-spacing:8px;text-shadow:0 0 24px rgba(255,200,80,0.6);
     opacity:0;transition:opacity .8s;white-space:nowrap;}
@@ -69,7 +92,7 @@
     <button id="enterBtn">入 寺</button>
     <div id="enterTip"></div>
     <div class="enter-foot">WebGL 3D · 实时多人 · 最多 100 人同寺<br>
-      <b>点击地面移动</b> · 鼠标拖拽转视角 · E 打坐 · J 念经 · K 敲木鱼</div>
+      <span id="enterFootTip"><b>点击地面移动</b> · 鼠标拖拽转视角 · E 打坐 · J 念经 · K 敲木鱼</span></div>
   </div>
 </div>
 <div id="hud">
@@ -80,8 +103,12 @@
   <div id="topRight"><button id="muteBtn">音效: 开</button></div>
   <div id="hintBar"></div>
   <div id="chatLog"></div>
-  <div id="chatInputWrap"><input id="chatInput" maxlength="60" placeholder="按 Enter 发送… (Esc 取消)"></div>
-  <div id="keysHelp">点击地面移动 · 拖拽转视角 · 滚轮缩放<br>E 打坐/起身 · J 念经 · K 敲木鱼 · Enter 聊天</div>
+  <div id="chatInputWrap"><input id="chatInput" maxlength="60" placeholder="按 Enter 发送… (Esc 取消)"><button id="chatSend">发送</button></div>
+  <div id="touchBar">
+    <button class="tbtn" id="btnChant">念经</button>
+    <button class="tbtn" id="btnChat">聊天</button>
+    <button class="tbtn" id="btnInteract">交互</button>
+  </div>
   <div id="centerMsg"></div>
 </div>
 <div id="flash"></div>
@@ -184,7 +211,16 @@ const AudioSys = {
 };
 
 /* ---------------- 渲染基础 ---------------- */
-const LOWFX = new URLSearchParams(location.search).has('lowfx'); // 低配降级：关阴影、减粒子
+const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0) ||
+  /Android|iPhone|iPad|iPod|HarmonyOS|Mobile/i.test(navigator.userAgent) ||
+  new URLSearchParams(location.search).has('touch'); /* 触屏设备（手机/平板）；?touch=1 便于桌面调试触屏布局 */
+const LOWFX = new URLSearchParams(location.search).has('lowfx') || (IS_TOUCH && window.innerWidth<1100); // 低配降级：关阴影、减粒子；手机默认低画质保帧率
+if(IS_TOUCH){ /* 手机端文案适配 */
+  const _eft = document.getElementById('enterFootTip');
+  if(_eft) _eft.innerHTML = '<b>点击地面移动</b> · 拖拽转视角 · 右下角触屏按钮操作';
+  const _ci = document.getElementById('chatInput');
+  if(_ci) _ci.placeholder = '输入聊天内容，点「发送」';
+}
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(LOWFX?1:Math.min(window.devicePixelRatio,2));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -602,32 +638,32 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
   const balMat = mat(0xb8bec6,{roughness:0.9});
   for(let i=0;i<6;i++){
     const bal = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.75,0.22), balMat);
-    const bx = -16.2+i*2.25;
-    bal.position.set(bx, 1.575, -19.2); bal.castShadow=true; scene.add(bal);
-    addCollider(bx,-19.2,0.45);
+    const bx = -15.7+i*2.25;
+    bal.position.set(bx, 1.575, -20.3); bal.castShadow=true; scene.add(bal);
+    addCollider(bx,-20.3,0.45);
   }
   for(let i=0;i<6;i++){
     const bal = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.75,0.22), balMat);
-    const bx = 16.2-i*2.25;
-    bal.position.set(bx, 1.575, -19.2); bal.castShadow=true; scene.add(bal);
-    addCollider(bx,-19.2,0.45);
+    const bx = 15.7-i*2.25;
+    bal.position.set(bx, 1.575, -20.3); bal.castShadow=true; scene.add(bal);
+    addCollider(bx,-20.3,0.45);
   }
-  const railSL = new THREE.Mesh(new THREE.BoxGeometry(12.3,0.18,0.28), balMat); railSL.position.set(-10.35,1.875,-19.2); scene.add(railSL);
-  const railSR = railSL.clone(); railSR.position.x=10.35; scene.add(railSR);
-  for(let i=0;i<15;i++){
-    const bz = -21.5-i*1.2;
+  const railSL = new THREE.Mesh(new THREE.BoxGeometry(11.0,0.18,0.28), balMat); railSL.position.set(-10,1.875,-20.3); scene.add(railSL);
+  const railSR = railSL.clone(); railSR.position.x=10; scene.add(railSR);
+  for(let i=0;i<14;i++){
+    const bz = -22.2-i*1.2;
     const bal = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.75,0.22), balMat);
-    bal.position.set(-16.75, 1.575, bz); bal.castShadow=true; scene.add(bal);
-    const bal2 = bal.clone(); bal2.position.x=16.75; scene.add(bal2);
-    addCollider(-16.75,bz,0.5); addCollider(16.75,bz,0.5);
+    bal.position.set(-15.7, 1.575, bz); bal.castShadow=true; scene.add(bal);
+    const bal2 = bal.clone(); bal2.position.x=15.7; scene.add(bal2);
+    addCollider(-15.7,bz,0.5); addCollider(15.7,bz,0.5);
   }
-  const railE2 = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.18,19.4), balMat); railE2.position.set(-16.75,1.875,-30.3); scene.add(railE2);
-  const railW2 = railE2.clone(); railW2.position.x=16.75; scene.add(railW2);
-  /* 大台阶（宽 9，实心阶梯：每级从地面堆到该级顶，消除首级底部悬空） */
+  const railE2 = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.18,15.6), balMat); railE2.position.set(-15.7,1.875,-30); scene.add(railE2);
+  const railW2 = railE2.clone(); railW2.position.x=15.7; scene.add(railW2);
+  /* 大台阶（宽 9，实心阶梯：每级从地面堆到该级顶；i=0 最高接台面，向南逐级降低） */
   for(let i=0;i<5;i++){
     const hgt = 1.2-0.24*i;
     const step = new THREE.Mesh(new THREE.BoxGeometry(9,hgt,0.66), stoneMat);
-    step.position.set(0, hgt/2, -18.9-0.66*i); step.receiveShadow=true; step.castShadow=true;
+    step.position.set(0, hgt/2, -18.67+0.66*i); step.receiveShadow=true; step.castShadow=true;
     scene.add(step);
   }
 
@@ -799,12 +835,12 @@ function buildRoofTile(){ return mat(0x3a4450,{roughness:0.85}); }
   pickRoot = new THREE.Group();
   const pg0 = new THREE.Mesh(new THREE.PlaneGeometry(160,160), pickMat);
   pg0.rotation.x=-Math.PI/2; pg0.position.set(0,0.01,0); pickRoot.add(pg0);
-  const pgTop = new THREE.Mesh(new THREE.PlaneGeometry(31.6,19.6), pickMat);
+  const pgTop = new THREE.Mesh(new THREE.PlaneGeometry(31.6,22), pickMat);
   pgTop.rotation.x=-Math.PI/2; pgTop.position.set(0,1.21,-30); pickRoot.add(pgTop);
   for(let pi=0;pi<5;pi++){
     const ph=1.2-0.24*pi;
     const sp=new THREE.Mesh(new THREE.PlaneGeometry(9,0.66), pickMat);
-    sp.rotation.x=-Math.PI/2; sp.position.set(0,ph+0.01,-18.9-0.66*pi); pickRoot.add(sp);
+    sp.rotation.x=-Math.PI/2; sp.position.set(0,ph+0.01,-18.67+0.66*pi); pickRoot.add(sp);
   }
   scene.add(pickRoot);
   /* 还原劫持：hallAll 整体南移 3m，碰撞与蒲团数据同步补偿 */
@@ -1200,6 +1236,7 @@ function handleMessage(d){
   switch(d.t){
     case 'ok': {
       selfId = d.you.id; selfColor = d.you.color;
+      try{ localStorage.setItem('yzs_last_name', selfId); }catch(e){} /* 浏览器本地缓存：记住本次法号 */
       setAvatarColor(local.av, selfColor);
       local.x = d.you.x; local.z = d.you.z; local.ry = d.you.ry;
       onlineN = d.users.length;
@@ -1208,9 +1245,10 @@ function handleMessage(d){
       joined = true;
       document.getElementById('enterScreen').style.display='none';
       document.getElementById('hud').style.display='block';
+      if(IS_TOUCH) document.getElementById('touchBar').style.display='flex';
       AudioSys.bell(0.5);
       addChatLine(`欢迎施主「${selfId}」来到云上禅寺`, true);
-      addChatLine('点击地面移动 · E 打坐 · J 念经 · K 敲木鱼 · Enter 聊天', true);
+      addChatLine(IS_TOUCH ? '点击地面移动 · 右下角：交互/念经/聊天' : '点击地面移动 · E 打坐 · J 念经 · K 敲木鱼 · Enter 聊天', true);
       showCenter('欢迎入寺');
       break;
     }
@@ -1271,12 +1309,15 @@ function connect(id){
 
 /* ---------------- 地形高度 ---------------- */
 function groundY(x,z){
-  /* 台阶（世界坐标，殿整体南移 3m 后）：5 级阶梯逐级抬升，防走进台阶穿模 */
-  if(Math.abs(x)<4.5 && z<=-15.9 && z>=-18.9){
-    const i = Math.min(4, Math.floor((-15.9-z)/0.66));
-    return 1.2-0.24*i;
+  /* 台基三层收分（世界坐标，殿整体南移 3m 后）：t1 顶0.5 / t2 顶1.0 / t3 顶1.2，防止侧向走进台阶穿模 */
+  const ax = Math.abs(x);
+  /* 大台阶：北接台面 z=-16（1.2m），5 级向南逐级降至 z=-12.7，与几何一一对应 */
+  if(ax<4.5 && z>-16 && z<=-12.7){
+    return 1.2-0.24*Math.min(4, Math.floor((z+16)/0.66));
   }
-  if(Math.abs(x)<15.5 && z<=-18.6 && z>=-37.5) return 1.2;      // 殿台基上（t3 台面）
+  if(ax<15.5 && z<=-16 && z>=-38) return 1.2;      // t3 台面（31.6×19.6 中心z-27）
+  if(ax<16.3 && z<=-16.7 && z>=-37.3) return 1.0;  // t2 收分层（32.6×20.6）
+  if(ax<17 && z<=-16 && z>=-38) return 0.5;         // t1 底座层（34×22）
   return 0;
 }
 /* 角色目标高度（打坐时贴合蒲团/地面） */
@@ -1350,8 +1391,18 @@ function tryClickMove(cx, cy){
   if(hits.length){
     const p = hits[0].point;
     local.moveTarget = {x:p.x, z:p.z};
+    spawnRipple(p.x, p.y+0.02, p.z); /* 点击地面反馈：金色涟漪扩散 */
     if(local.state!=='idle') standUp();
   }
+}
+bindTouchBtn('btnInteract', ()=>{ if(joined) doInteract(); });
+bindTouchBtn('btnChant', ()=>{ if(joined) toggleChant(); });
+bindTouchBtn('btnChat', ()=>{ if(joined){ chatWrap.style.display='block'; chatInput.focus(); } });
+document.getElementById('chatSend').addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); submitChat(); });
+function bindTouchBtn(id, fn){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); fn(); });
 }
 renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; dragMoved=false; downOnCanvas=true; downX=lastMX=e.clientX; downY=lastMY=e.clientY; downT=performance.now(); });
 window.addEventListener('pointerup', e=>{
@@ -1421,6 +1472,7 @@ function doInteract(){
     case 'sitting': case 'chanting': standUp(); break;
     case 'cushion': sitDown(it.cu); break;
     case 'burner': startIncense(); break;
+    case 'fish': tryKnock(); break;
     case 'ground': sitDown(null); break;
   }
 }
@@ -1452,7 +1504,7 @@ function toggleChant(){
     drawLabel(local.label, selfId, 'sit');
     AudioSys.chant(false);
   } else if(local.state==='idle'){
-    showCenter('需先打坐 (按 E)');
+    showCenter(IS_TOUCH ? '需先打坐（点「交互」坐上蒲团）' : '需先打坐 (按 E)');
   }
 }
 function startIncense(){
@@ -1563,6 +1615,11 @@ function doEnter(){
 }
 enterBtn.addEventListener('click', doEnter);
 nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doEnter(); });
+/* 浏览器本地缓存：回填上次使用的法号（可修改；?id= 参数仍优先） */
+try{
+  const _lastName = localStorage.getItem('yzs_last_name');
+  if(_lastName) nameInput.value = _lastName;
+}catch(e){}
 /* URL 参数自动入寺（便于分享链接直达与自动化测试） */
 (function(){
   const qid=new URLSearchParams(location.search).get('id');
@@ -1637,21 +1694,30 @@ function loop(now){
     drawLabel(local.label, selfId, lbState);
     if(local.bubble.sp.visible && now>local.bubble.until) local.bubble.sp.visible=false;
 
-    /* 交互提示 */
+    /* 交互提示（手机端文案适配触屏按钮） */
     const it=nearestInteract();
     const hintBar=document.getElementById('hintBar');
-    const hints={
-      sitting:'打坐中 · 按 J 念经 · 按 E 起身',
-      chanting:'念经中 · 按 J 停止 · 按 E 起身',
-      incensing:'敬香中…',
-      cushion:'按 E 上蒲团打坐',
-      burner:'按 E 敬香（功德 +10）',
-      fish:'按 K 敲木鱼（功德 +1）',
-      ground:'按 E 原地打坐'
-    };
-    const h=hints[it.type];
-    if(h){ hintBar.textContent=h; hintBar.style.display='block'; }
-    else hintBar.style.display='none';
+    /* 情境化操作按钮：随所处场景动态生成，点击即触发对应动作（替代原纯文字提示） */
+    let acts=null, htxt='';
+    if(it.type==='sitting'){ acts=[['念经', toggleChant], ['起身', standUp]]; }
+    else if(it.type==='chanting'){ acts=[['停止念经', toggleChant], ['起身', standUp]]; }
+    else if(it.type==='incensing'){ htxt='敬香中…'; }
+    else if(it.type==='cushion'){ acts=[['上蒲团打坐', doInteract]]; }
+    else if(it.type==='burner'){ acts=[['敬香 · 功德+10', doInteract]]; }
+    else if(it.type==='fish'){ acts=[['敲木鱼 · 功德+1', tryKnock]]; }
+    else { acts=[['原地打坐', doInteract]]; }
+    const sig = htxt ? ('t:'+htxt) : ('a:'+acts.map(a=>a[0]).join('|'));
+    if(hintBar.dataset.sig !== sig){
+      hintBar.dataset.sig = sig;
+      hintBar.innerHTML = '';
+      if(htxt){ const d=document.createElement('div'); d.className='htext'; d.textContent=htxt; hintBar.appendChild(d); }
+      else for(const [label, fn] of acts){
+        const b=document.createElement('button'); b.type='button'; b.className='hbtn'; b.textContent=label;
+        b.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(joined) fn(); });
+        hintBar.appendChild(b);
+      }
+      hintBar.style.display='flex';
+    }
   }
 
   /* --- 远程玩家 --- */
